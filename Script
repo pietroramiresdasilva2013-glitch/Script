@@ -1,420 +1,590 @@
--- MX HUB | FE Scripts (R6)
--- Ícone: 106023300176700
+--[[
+    MX HUB - Delta Executor Mobile
+    Script em Luau para Roblox (R6 / FilteringEnabled)
+    Funcionalidades: Noclip, Infinite Jump, Fly
+--]]
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+-- =========================================================
+-- SERVIÇOS
+-- =========================================================
+local Players            = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local UserInputService   = game:GetService("UserInputService")
+local TweenService       = game:GetService("TweenService")
+local CoreGui            = game:GetService("CoreGui")
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 
-pcall(function()
-	if playerGui:FindFirstChild("SpeedToggleGUI") then
-		playerGui.SpeedToggleGUI:Destroy()
-	end
+-- =========================================================
+-- REMOVER GUI ANTIGO
+-- =========================================================
+local function destroyOld()
+    local old = CoreGui:FindFirstChild("MXHUB")
+    if old then old:Destroy() end
+    old = PlayerGui:FindFirstChild("MXHUB")
+    if old then old:Destroy() end
+end
+destroyOld()
+
+-- =========================================================
+-- CONFIGURAÇÕES
+-- =========================================================
+local CONFIG = {
+    Title      = "MX HUB",
+    IconId     = "rbxassetid://106023300176700",
+    Colors = {
+        Bg         = Color3.fromRGB(20, 20, 25),
+        BgAlt      = Color3.fromRGB(28, 28, 35),
+        Header     = Color3.fromRGB(15, 15, 20),
+        Border     = Color3.fromRGB(55, 55, 70),
+        Text       = Color3.fromRGB(235, 235, 245),
+        SubText    = Color3.fromRGB(160, 160, 180),
+        Accent     = Color3.fromRGB(90, 120, 255),
+        On         = Color3.fromRGB(0, 200, 100),
+        Off        = Color3.fromRGB(60, 60, 75),
+        Resize     = Color3.fromRGB(0, 200, 100),
+    },
+    FlySpeed   = 60,
+    JumpPower  = 50,
+}
+
+-- =========================================================
+-- ESTADOS
+-- =========================================================
+local State = {
+    Noclip     = false,
+    InfJump    = false,
+    Fly        = false,
+}
+
+local Connections = {
+    Noclip = nil,
+    InfJump = nil,
+    FlyRender = nil,
+    FlyInputBegan = nil,
+    FlyInputEnded = nil,
+}
+
+local FlyBodyVel   = nil
+local FlyGyro      = nil
+local FlyKeys      = {W=false, A=false, S=false, D=false, Space=false, Shift=false}
+
+-- =========================================================
+-- SCREEN GUI
+-- =========================================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MXHUB"
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999999
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Tenta parentear em CoreGui (executors) senão PlayerGui
+local ok, err = pcall(function()
+    ScreenGui.Parent = CoreGui
 end)
+if not ok or not ScreenGui.Parent then
+    ScreenGui.Parent = PlayerGui
+end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SpeedToggleGUI"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.DisplayOrder = 999
-screenGui.Parent = playerGui
+-- =========================================================
+-- ÍCONE FLUTUANTE
+-- =========================================================
+local FloatingBtn = Instance.new("ImageButton")
+FloatingBtn.Name = "FloatingIcon"
+FloatingBtn.Size = UDim2.fromOffset(55, 55)
+FloatingBtn.Position = UDim2.new(0, 20, 0.4, 0)
+FloatingBtn.BackgroundColor3 = CONFIG.Colors.Accent
+FloatingBtn.Image = CONFIG.IconId
+FloatingBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+FloatingBtn.AutoButtonColor = false
+FloatingBtn.Active = true
+FloatingBtn.Draggable = true
+FloatingBtn.ZIndex = 5
+FloatingBtn.Parent = ScreenGui
 
--- Ícone
-local icon = Instance.new("ImageButton")
-icon.Name = "SpeedIcon"
-icon.Size = UDim2.new(0, 56, 0, 56)
-icon.Position = UDim2.new(0, 12, 0.5, -28)
-icon.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-icon.BackgroundTransparency = 0.1
-icon.Image = "rbxassetid://106023300176700"
-icon.ScaleType = Enum.ScaleType.Fit
-icon.Parent = screenGui
+local floatCorner = Instance.new("UICorner")
+floatCorner.CornerRadius = UDim.new(1, 0)
+floatCorner.Parent = FloatingBtn
 
-local iconCorner = Instance.new("UICorner")
-iconCorner.CornerRadius = UDim.new(0, 12)
-iconCorner.Parent = icon
+local floatStroke = Instance.new("UIStroke")
+floatStroke.Color = CONFIG.Colors.Border
+floatStroke.Thickness = 2
+floatStroke.Parent = FloatingBtn
 
-local iconStroke = Instance.new("UIStroke")
-iconStroke.Color = Color3.fromRGB(0, 220, 100)
-iconStroke.Thickness = 2
-iconStroke.Parent = icon
+local floatPad = Instance.new("UIPadding")
+floatPad.PaddingTop = UDim.new(0, 6)
+floatPad.PaddingBottom = UDim.new(0, 6)
+floatPad.PaddingLeft = UDim.new(0, 6)
+floatPad.PaddingRight = UDim.new(0, 6)
+floatPad.Parent = FloatingBtn
 
--- Janela
-local window = Instance.new("Frame")
-window.Name = "SpeedWindow"
-window.Size = UDim2.new(0, 320, 0, 280)
-window.Position = UDim2.new(0.5, -160, 0.5, -140)
-window.BackgroundColor3 = Color3.fromRGB(18, 18, 23)
-window.BorderSizePixel = 0
-window.Visible = false
-window.Parent = screenGui
+-- =========================================================
+-- PAINEL PRINCIPAL
+-- =========================================================
+local Panel = Instance.new("Frame")
+Panel.Name = "Panel"
+Panel.Size = UDim2.fromOffset(320, 380)
+Panel.Position = UDim2.new(0.5, -160, 0.5, -190)
+Panel.BackgroundColor3 = CONFIG.Colors.Bg
+Panel.BorderSizePixel = 0
+Panel.Visible = false
+Panel.Active = true
+Panel.ZIndex = 10
+Panel.Parent = ScreenGui
 
-local windowCorner = Instance.new("UICorner")
-windowCorner.CornerRadius = UDim.new(0, 14)
-windowCorner.Parent = window
+local panelCorner = Instance.new("UICorner")
+panelCorner.CornerRadius = UDim.new(0, 12)
+panelCorner.Parent = Panel
 
-local windowStroke = Instance.new("UIStroke")
-windowStroke.Color = Color3.fromRGB(45, 45, 55)
-windowStroke.Thickness = 1.4
-windowStroke.Parent = window
+local panelStroke = Instance.new("UIStroke")
+panelStroke.Color = CONFIG.Colors.Border
+panelStroke.Thickness = 1.5
+panelStroke.Parent = Panel
 
--- Header
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 42)
-header.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-header.BorderSizePixel = 0
-header.Parent = window
+local panelPad = Instance.new("UIPadding")
+panelPad.PaddingTop = UDim.new(0, 8)
+panelPad.PaddingBottom = UDim.new(0, 8)
+panelPad.PaddingLeft = UDim.new(0, 8)
+panelPad.PaddingRight = UDim.new(0, 8)
+panelPad.Parent = Panel
+
+-- =========================================================
+-- HEADER
+-- =========================================================
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 38)
+Header.BackgroundColor3 = CONFIG.Colors.Header
+Header.BorderSizePixel = 0
+Header.ZIndex = 11
+Header.Parent = Panel
 
 local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 14)
-headerCorner.Parent = header
+headerCorner.CornerRadius = UDim.new(0, 10)
+headerCorner.Parent = Header
 
-local headerFix = Instance.new("Frame")
-headerFix.Size = UDim2.new(1, 0, 0, 16)
-headerFix.Position = UDim2.new(0, 0, 1, -16)
-headerFix.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-headerFix.BorderSizePixel = 0
-headerFix.Parent = header
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -80, 1, 0)
+Title.Position = UDim2.fromOffset(12, 0)
+Title.BackgroundTransparency = 1
+Title.Text = CONFIG.Title
+Title.TextColor3 = CONFIG.Colors.Text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.ZIndex = 12
+Title.Parent = Header
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -100, 1, 0)
-title.Position = UDim2.new(0, 16, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "MX HUB"
-title.TextColor3 = Color3.fromRGB(240, 240, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 17
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = header
+-- Botão minimizar (−)
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.fromOffset(32, 32)
+MinBtn.Position = UDim2.new(1, -72, 0, 3)
+MinBtn.BackgroundColor3 = CONFIG.Colors.Off
+MinBtn.Text = "−"
+MinBtn.TextColor3 = CONFIG.Colors.Text
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = 22
+MinBtn.AutoButtonColor = false
+MinBtn.ZIndex = 12
+MinBtn.Parent = Header
+local minC = Instance.new("UICorner") minC.CornerRadius = UDim.new(0, 8) minC.Parent = MinBtn
 
-local minBtn = Instance.new("TextButton")
-minBtn.Size = UDim2.new(0, 36, 0, 28)
-minBtn.Position = UDim2.new(1, -84, 0.5, -14)
-minBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-minBtn.Text = "−"
-minBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
-minBtn.Font = Enum.Font.GothamBold
-minBtn.TextSize = 22
-minBtn.ZIndex = 6
-minBtn.Parent = header
+-- Botão fechar (X)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.fromOffset(32, 32)
+CloseBtn.Position = UDim2.new(1, -36, 0, 3)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = CONFIG.Colors.Text
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 16
+CloseBtn.AutoButtonColor = false
+CloseBtn.ZIndex = 12
+CloseBtn.Parent = Header
+local closeC = Instance.new("UICorner") closeC.CornerRadius = UDim.new(0, 8) closeC.Parent = CloseBtn
 
-local minCorner = Instance.new("UICorner")
-minCorner.CornerRadius = UDim.new(0, 7)
-minCorner.Parent = minBtn
+-- =========================================================
+-- CONTAINER DE BOTÕES
+-- =========================================================
+local Body = Instance.new("Frame")
+Body.Name = "Body"
+Body.Size = UDim2.new(1, 0, 1, -46)
+Body.Position = UDim2.fromOffset(0, 44)
+Body.BackgroundTransparency = 1
+Body.ZIndex = 11
+Body.Parent = Panel
 
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 36, 0, 28)
-closeBtn.Position = UDim2.new(1, -42, 0.5, -14)
-closeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 50)
-closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 16
-closeBtn.ZIndex = 6
-closeBtn.Parent = header
+local bodyLayout = Instance.new("UIListLayout")
+bodyLayout.Padding = UDim.new(0, 8)
+bodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+bodyLayout.Parent = Body
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 7)
-closeCorner.Parent = closeBtn
+local bodyPad = Instance.new("UIPadding")
+bodyPad.PaddingTop = UDim.new(0, 6)
+bodyPad.PaddingLeft = UDim.new(0, 2)
+bodyPad.PaddingRight = UDim.new(0, 2)
+bodyPad.Parent = Body
 
--- Drag button
-local dragButton = Instance.new("TextButton")
-dragButton.Size = UDim2.new(1, -90, 1, 0)
-dragButton.Position = UDim2.new(0, 0, 0, 0)
-dragButton.BackgroundTransparency = 1
-dragButton.Text = ""
-dragButton.ZIndex = 5
-dragButton.Parent = header
+-- Função para criar botão toggle
+local function createToggle(name, order)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(1, 0, 0, 46)
+    btn.BackgroundColor3 = CONFIG.Colors.Off
+    btn.Text = name .. "  [OFF]"
+    btn.TextColor3 = CONFIG.Colors.Text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 15
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = order
+    btn.ZIndex = 12
+    btn.Parent = Body
 
--- Conteúdo
-local content = Instance.new("Frame")
-content.Size = UDim2.new(1, 0, 1, -42)
-content.Position = UDim2.new(0, 0, 0, 42)
-content.BackgroundTransparency = 1
-content.Parent = window
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 10) c.Parent = btn
+    local s = Instance.new("UIStroke") s.Color = CONFIG.Colors.Border s.Thickness = 1 s.Parent = btn
 
-local card = Instance.new("Frame")
-card.Size = UDim2.new(1, -24, 1, -24)
-card.Position = UDim2.new(0, 12, 0, 12)
-card.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-card.BorderSizePixel = 0
-card.Parent = content
+    local ind = Instance.new("Frame")
+    ind.Size = UDim2.fromOffset(6, 24)
+    ind.Position = UDim2.new(0, 0, 0.5, -12)
+    ind.BackgroundColor3 = CONFIG.Colors.Accent
+    ind.BorderSizePixel = 0
+    ind.ZIndex = 13
+    ind.Parent = btn
+    local ic = Instance.new("UICorner") ic.CornerRadius = UDim.new(1, 0) ic.Parent = ind
 
-local cardCorner = Instance.new("UICorner")
-cardCorner.CornerRadius = UDim.new(0, 12)
-cardCorner.Parent = card
-
-local cardStroke = Instance.new("UIStroke")
-cardStroke.Color = Color3.fromRGB(50, 50, 60)
-cardStroke.Thickness = 1
-cardStroke.Parent = card
-
--- Título interno
-local info = Instance.new("TextLabel")
-info.Size = UDim2.new(1, 0, 0, 28)
-info.Position = UDim2.new(0, 0, 0, 10)
-info.BackgroundTransparency = 1
-info.Text = "FE Scripts • R6"
-info.TextColor3 = Color3.fromRGB(160, 160, 180)
-info.Font = Enum.Font.Gotham
-info.TextSize = 14
-info.Parent = card
-
--- Botão Noclip
-local noclipBtn = Instance.new("TextButton")
-noclipBtn.Size = UDim2.new(0.86, 0, 0, 42)
-noclipBtn.Position = UDim2.new(0.07, 0, 0, 50)
-noclipBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-noclipBtn.Text = "Noclip: OFF"
-noclipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-noclipBtn.Font = Enum.Font.GothamBold
-noclipBtn.TextSize = 16
-noclipBtn.Parent = card
-
-local noclipCorner = Instance.new("UICorner")
-noclipCorner.CornerRadius = UDim.new(0, 10)
-noclipCorner.Parent = noclipBtn
-
--- Botão Infinite Jump
-local jumpBtn = Instance.new("TextButton")
-jumpBtn.Size = UDim2.new(0.86, 0, 0, 42)
-jumpBtn.Position = UDim2.new(0.07, 0, 0, 105)
-jumpBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-jumpBtn.Text = "Infinite Jump: OFF"
-jumpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-jumpBtn.Font = Enum.Font.GothamBold
-jumpBtn.TextSize = 16
-jumpBtn.Parent = card
-
-local jumpCorner = Instance.new("UICorner")
-jumpCorner.CornerRadius = UDim.new(0, 10)
-jumpCorner.Parent = jumpBtn
-
--- Botão Fly
-local flyBtn = Instance.new("TextButton")
-flyBtn.Size = UDim2.new(0.86, 0, 0, 42)
-flyBtn.Position = UDim2.new(0.07, 0, 0, 160)
-flyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-flyBtn.Text = "Fly: OFF"
-flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-flyBtn.Font = Enum.Font.GothamBold
-flyBtn.TextSize = 16
-flyBtn.Parent = card
-
-local flyCorner = Instance.new("UICorner")
-flyCorner.CornerRadius = UDim.new(0, 10)
-flyCorner.Parent = flyBtn
-
--- Resize
-local resizeHandle = Instance.new("TextButton")
-resizeHandle.Size = UDim2.new(0, 22, 0, 22)
-resizeHandle.Position = UDim2.new(1, -22, 1, -22)
-resizeHandle.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
-resizeHandle.BackgroundTransparency = 0.3
-resizeHandle.Text = ""
-resizeHandle.AutoButtonColor = false
-resizeHandle.ZIndex = 10
-resizeHandle.Parent = window
-
-local resizeCorner = Instance.new("UICorner")
-resizeCorner.CornerRadius = UDim.new(0, 6)
-resizeCorner.Parent = resizeHandle
-
--- Variáveis
-local noclipEnabled = false
-local infJumpEnabled = false
-local flyEnabled = false
-local flySpeed = 50
-local bodyVelocity
-local aberto = false
-local draggingWindow = false
-local resizing = false
-local dragStart, startPos, resizeStart, sizeStart
-local noclipConnection
-local flyConnection
-
--- Funções
-local function setNoclip(state)
-	noclipEnabled = state
-	noclipBtn.Text = "Noclip: " .. (state and "ON" or "OFF")
-	noclipBtn.BackgroundColor3 = state and Color3.fromRGB(0, 140, 70) or Color3.fromRGB(35, 35, 45)
-
-	if noclipConnection then
-		noclipConnection:Disconnect()
-		noclipConnection = nil
-	end
-
-	if state then
-		noclipConnection = RunService.Stepped:Connect(function()
-			local char = player.Character
-			if char then
-				for _, part in pairs(char:GetDescendants()) do
-					if part:IsA("BasePart") then
-						part.CanCollide = false
-					end
-				end
-			end
-		end)
-	end
+    return btn
 end
 
-local function setInfJump(state)
-	infJumpEnabled = state
-	jumpBtn.Text = "Infinite Jump: " .. (state and "ON" or "OFF")
-	jumpBtn.BackgroundColor3 = state and Color3.fromRGB(0, 140, 70) or Color3.fromRGB(35, 35, 45)
+local NoclipBtn = createToggle("Noclip", 1)
+local JumpBtn   = createToggle("Infinite Jump", 2)
+local FlyBtn    = createToggle("Fly", 3)
+
+-- Atualiza visual do botão
+local function updateBtn(btn, label, state)
+    btn.Text = label .. (state and "  [ON]" or "  [OFF]")
+    local targetColor = state and CONFIG.Colors.On or CONFIG.Colors.Off
+    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = targetColor}):Play()
 end
 
-local function setFly(state)
-	flyEnabled = state
-	flyBtn.Text = "Fly: " .. (state and "ON" or "OFF")
-	flyBtn.BackgroundColor3 = state and Color3.fromRGB(0, 140, 70) or Color3.fromRGB(35, 35, 45)
+-- =========================================================
+-- RESIZE HANDLE
+-- =========================================================
+local ResizeHandle = Instance.new("TextButton")
+ResizeHandle.Size = UDim2.fromOffset(18, 18)
+ResizeHandle.Position = UDim2.new(1, -22, 1, -22)
+ResizeHandle.BackgroundColor3 = CONFIG.Colors.Resize
+ResizeHandle.Text = ""
+ResizeHandle.AutoButtonColor = false
+ResizeHandle.ZIndex = 15
+ResizeHandle.Parent = Panel
+local rhC = Instance.new("UICorner") rhC.CornerRadius = UDim.new(0, 5) rhC.Parent = ResizeHandle
 
-	local char = player.Character
-	if not char then return end
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	local humanoid = char:FindFirstChildOfClass("Humanoid")
-	if not hrp or not humanoid then return end
+-- =========================================================
+-- DRAG DO PAINEL (header)
+-- =========================================================
+local dragging, dragStart, startPos
 
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
-	end
-	if bodyVelocity then
-		bodyVelocity:Destroy()
-		bodyVelocity = nil
-	end
-
-	if state then
-		bodyVelocity = Instance.new("BodyVelocity")
-		bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-		bodyVelocity.Velocity = Vector3.zero
-		bodyVelocity.Parent = hrp
-
-		flyConnection = RunService.RenderStepped:Connect(function()
-			if not flyEnabled or not bodyVelocity then return end
-			local cam = workspace.CurrentCamera
-			local move = Vector3.zero
-
-			if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-				move = move + cam.CFrame.LookVector
-			end
-			if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-				move = move - cam.CFrame.LookVector
-			end
-			if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-				move = move - cam.CFrame.RightVector
-			end
-			if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-				move = move + cam.CFrame.RightVector
-			end
-			if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-				move = move + Vector3.new(0, 1, 0)
-			end
-			if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-				move = move - Vector3.new(0, 1, 0)
-			end
-
-			if move.Magnitude > 0 then
-				bodyVelocity.Velocity = move.Unit * flySpeed
-			else
-				bodyVelocity.Velocity = Vector3.zero
-			end
-		end)
-	else
-		if humanoid then
-			humanoid.PlatformStand = false
-		end
-	end
+local function makeDraggable(handle, frame)
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
 end
 
--- Botões
-noclipBtn.MouseButton1Click:Connect(function()
-	setNoclip(not noclipEnabled)
+makeDraggable(Header, Panel)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        Panel.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
 end)
 
-jumpBtn.MouseButton1Click:Connect(function()
-	setInfJump(not infJumpEnabled)
-end)
+-- =========================================================
+-- RESIZE
+-- =========================================================
+local resizing, resizeStart, resizeSize
 
-flyBtn.MouseButton1Click:Connect(function()
-	setFly(not flyEnabled)
-end)
-
--- Infinite Jump
-UserInputService.JumpRequest:Connect(function()
-	if infJumpEnabled then
-		local char = player.Character
-		if char then
-			local humanoid = char:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-			end
-		end
-	end
-end)
-
--- Arrastar
-dragButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingWindow = true
-		dragStart = input.Position
-		startPos = window.Position
-	end
-end)
-
-resizeHandle.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		resizing = true
-		resizeStart = input.Position
-		sizeStart = window.Size
-	end
+ResizeHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        resizing = true
+        resizeStart = input.Position
+        resizeSize = Panel.AbsoluteSize
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                resizing = false
+            end
+        end)
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		if draggingWindow then
-			local delta = input.Position - dragStart
-			window.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		end
-		if resizing then
-			local delta = input.Position - resizeStart
-			local newW = math.clamp(sizeStart.X.Offset + delta.X, 280, 500)
-			local newH = math.clamp(sizeStart.Y.Offset + delta.Y, 240, 450)
-			window.Size = UDim2.new(0, newW, 0, newH)
-		end
-	end
+    if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - resizeStart
+        local newW = math.max(240, resizeSize.X + delta.X)
+        local newH = math.max(220, resizeSize.Y + delta.Y)
+        Panel.Size = UDim2.fromOffset(newW, newH)
+    end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingWindow = false
-		resizing = false
-	end
+-- =========================================================
+-- TOGGLE VISIBILIDADE
+-- =========================================================
+FloatingBtn.MouseButton1Click:Connect(function()
+    Panel.Visible = not Panel.Visible
 end)
 
-minBtn.MouseButton1Click:Connect(function()
-	aberto = false
-	window.Visible = false
+MinBtn.MouseButton1Click:Connect(function()
+    Panel.Visible = false
 end)
 
-closeBtn.MouseButton1Click:Connect(function()
-	setNoclip(false)
-	setInfJump(false)
-	setFly(false)
-	screenGui:Destroy()
+CloseBtn.MouseButton1Click:Connect(function()
+    -- Destroy tudo
+    if Connections.Noclip then Connections.Noclip:Disconnect() end
+    if Connections.InfJump then Connections.InfJump:Disconnect() end
+    if Connections.FlyRender then Connections.FlyRender:Disconnect() end
+    if Connections.FlyInputBegan then Connections.FlyInputBegan:Disconnect() end
+    if Connections.FlyInputEnded then Connections.FlyInputEnded:Disconnect() end
+
+    if FlyBodyVel then FlyBodyVel:Destroy() end
+    if FlyGyro then FlyGyro:Destroy() end
+
+    ScreenGui:Destroy()
 end)
 
-icon.MouseButton1Click:Connect(function()
-	aberto = not aberto
-	window.Visible = aberto
+-- =========================================================
+-- UTILITÁRIOS DE PERSONAGEM
+-- =========================================================
+local function getChar()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+
+local function getHRP()
+    local char = getChar()
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHumanoid()
+    local char = getChar()
+    return char:FindFirstChildOfClass("Humanoid")
+end
+
+-- =========================================================
+-- NOCLIP
+-- =========================================================
+local function applyNoclip()
+    if Connections.Noclip then
+        Connections.Noclip:Disconnect()
+        Connections.Noclip = nil
+    end
+
+    Connections.Noclip = RunService.Stepped:Connect(function()
+        if not State.Noclip then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end)
+end
+
+-- =========================================================
+-- INFINITE JUMP
+-- =========================================================
+local function applyInfJump()
+    if Connections.InfJump then
+        Connections.InfJump:Disconnect()
+        Connections.InfJump = nil
+    end
+
+    Connections.InfJump = UserInputService.JumpRequest:Connect(function()
+        if not State.InfJump then return end
+        local hum = getHumanoid()
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end)
+end
+
+-- =========================================================
+-- FLY (BodyVelocity + BodyGyro)
+-- =========================================================
+local function stopFly()
+    if FlyBodyVel then FlyBodyVel:Destroy() FlyBodyVel = nil end
+    if FlyGyro then FlyGyro:Destroy() FlyGyro = nil end
+    if Connections.FlyRender then Connections.FlyRender:Disconnect() Connections.FlyRender = nil end
+    for k in pairs(FlyKeys) do FlyKeys[k] = false end
+end
+
+local function startFly()
+    stopFly()
+
+    local hrp = getHRP()
+    local hum = getHumanoid()
+    if not hrp or not hum then return end
+
+    hum.PlatformStand = true
+
+    FlyBodyVel = Instance.new("BodyVelocity")
+    FlyBodyVel.Name = "MXHUB_FlyBV"
+    FlyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    FlyBodyVel.Velocity = Vector3.zero
+    FlyBodyVel.Parent = hrp
+
+    FlyGyro = Instance.new("BodyGyro")
+    FlyGyro.Name = "MXHUB_FlyGyro"
+    FlyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    FlyGyro.P = 3000
+    FlyGyro.D = 100
+    FlyGyro.CFrame = hrp.CFrame
+    FlyGyro.Parent = hrp
+
+    -- Inputs de teclado
+    if Connections.FlyInputBegan then Connections.FlyInputBegan:Disconnect() end
+    if Connections.FlyInputEnded then Connections.FlyInputEnded:Disconnect() end
+
+    Connections.FlyInputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if not State.Fly then return end
+        if input.KeyCode == Enum.KeyCode.W then FlyKeys.W = true
+        elseif input.KeyCode == Enum.KeyCode.A then FlyKeys.A = true
+        elseif input.KeyCode == Enum.KeyCode.S then FlyKeys.S = true
+        elseif input.KeyCode == Enum.KeyCode.D then FlyKeys.D = true
+        elseif input.KeyCode == Enum.KeyCode.Space then FlyKeys.Space = true
+        elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then FlyKeys.Shift = true
+        end
+    end)
+
+    Connections.FlyInputEnded = UserInputService.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.W then FlyKeys.W = false
+        elseif input.KeyCode == Enum.KeyCode.A then FlyKeys.A = false
+        elseif input.KeyCode == Enum.KeyCode.S then FlyKeys.S = false
+        elseif input.KeyCode == Enum.KeyCode.D then FlyKeys.D = false
+        elseif input.KeyCode == Enum.KeyCode.Space then FlyKeys.Space = false
+        elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then FlyKeys.Shift = false
+        end
+    end)
+
+    -- Loop de voo
+    Connections.FlyRender = RunService.RenderStepped:Connect(function()
+        if not State.Fly then return end
+        local root = getHRP()
+        local human = getHumanoid()
+        if not root or not human or human.Health <= 0 then
+            if State.Fly then
+                State.Fly = false
+                updateBtn(FlyBtn, "Fly", false)
+                stopFly()
+            end
+            return
+        end
+
+        if not FlyBodyVel or not FlyGyro then return end
+
+        local cam = workspace.CurrentCamera
+        local moveDir = Vector3.zero
+
+        if FlyKeys.W then moveDir += cam.CFrame.LookVector end
+        if FlyKeys.S then moveDir -= cam.CFrame.LookVector end
+        if FlyKeys.A then moveDir -= cam.CFrame.RightVector end
+        if FlyKeys.D then moveDir += cam.CFrame.RightVector end
+        if FlyKeys.Space then moveDir += Vector3.new(0, 1, 0) end
+        if FlyKeys.Shift then moveDir -= Vector3.new(0, 1, 0) end
+
+        if moveDir.Magnitude > 0 then
+            moveDir = moveDir.Unit
+        end
+
+        FlyBodyVel.Velocity = moveDir * CONFIG.FlySpeed
+        FlyGyro.CFrame = cam.CFrame
+    end)
+end
+
+-- =========================================================
+-- HANDLERS DOS BOTÕES
+-- =========================================================
+NoclipBtn.MouseButton1Click:Connect(function()
+    State.Noclip = not State.Noclip
+    updateBtn(NoclipBtn, "Noclip", State.Noclip)
+    if State.Noclip then
+        applyNoclip()
+    else
+        if Connections.Noclip then Connections.Noclip:Disconnect() Connections.Noclip = nil end
+        -- Restaurar colisão
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
 end)
 
-player.CharacterAdded:Connect(function()
-	task.wait(0.5)
-	if noclipEnabled then setNoclip(true) end
-	if flyEnabled then setFly(true) end
+JumpBtn.MouseButton1Click:Connect(function()
+    State.InfJump = not State.InfJump
+    updateBtn(JumpBtn, "Infinite Jump", State.InfJump)
+    if State.InfJump then
+        applyInfJump()
+    else
+        if Connections.InfJump then Connections.InfJump:Disconnect() Connections.InfJump = nil end
+    end
 end)
 
-print("✅ MX HUB FE (R6) carregado")
+FlyBtn.MouseButton1Click:Connect(function()
+    State.Fly = not State.Fly
+    updateBtn(FlyBtn, "Fly", State.Fly)
+    if State.Fly then
+        startFly()
+    else
+        stopFly()
+        local hum = getHumanoid()
+        if hum then hum.PlatformStand = false end
+    end
+end)
+
+-- =========================================================
+-- PRESERVAR ESTADO NO RESPAWN
+-- =========================================================
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    if State.Noclip then applyNoclip() end
+    if State.Fly then
+        task.wait(0.5)
+        startFly()
+    end
+end)
+
+-- =========================================================
+-- ANIMAÇÃO INICIAL
+-- =========================================================
+Panel.Size = UDim2.fromOffset(0, 0)
+Panel.Visible = false
+
+FloatingBtn.MouseButton1Click:Connect(function()
+    if Panel.Visible then
+        Panel.Size = UDim2.fromOffset(320, 380)
+    end
+end)
+
+print("[MX HUB] Carregado com sucesso.")
