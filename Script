@@ -1,8 +1,9 @@
--- MX HUB | Speed + Jump Control
+-- MX HUB | FE Scripts (R6)
 -- Ícone: 106023300176700
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -43,8 +44,8 @@ iconStroke.Parent = icon
 -- Janela
 local window = Instance.new("Frame")
 window.Name = "SpeedWindow"
-window.Size = UDim2.new(0, 340, 0, 360)
-window.Position = UDim2.new(0.5, -170, 0.5, -180)
+window.Size = UDim2.new(0, 320, 0, 280)
+window.Position = UDim2.new(0.5, -160, 0.5, -140)
 window.BackgroundColor3 = Color3.fromRGB(18, 18, 23)
 window.BorderSizePixel = 0
 window.Visible = false
@@ -118,7 +119,7 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 7)
 closeCorner.Parent = closeBtn
 
--- Botão de arrastar
+-- Drag button
 local dragButton = Instance.new("TextButton")
 dragButton.Size = UDim2.new(1, -90, 1, 0)
 dragButton.Position = UDim2.new(0, 0, 0, 0)
@@ -150,151 +151,63 @@ cardStroke.Color = Color3.fromRGB(50, 50, 60)
 cardStroke.Thickness = 1
 cardStroke.Parent = card
 
--- ===== SPEED =====
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(1, 0, 0, 26)
-speedLabel.Position = UDim2.new(0, 0, 0, 12)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Text = "Velocidade: 16"
-speedLabel.TextColor3 = Color3.fromRGB(210, 210, 230)
-speedLabel.Font = Enum.Font.GothamMedium
-speedLabel.TextSize = 16
-speedLabel.Parent = card
+-- Título interno
+local info = Instance.new("TextLabel")
+info.Size = UDim2.new(1, 0, 0, 28)
+info.Position = UDim2.new(0, 0, 0, 10)
+info.BackgroundTransparency = 1
+info.Text = "FE Scripts • R6"
+info.TextColor3 = Color3.fromRGB(160, 160, 180)
+info.Font = Enum.Font.Gotham
+info.TextSize = 14
+info.Parent = card
 
-local speedSliderBg = Instance.new("Frame")
-speedSliderBg.Size = UDim2.new(0.86, 0, 0, 9)
-speedSliderBg.Position = UDim2.new(0.07, 0, 0, 46)
-speedSliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-speedSliderBg.BorderSizePixel = 0
-speedSliderBg.Parent = card
+-- Botão Noclip
+local noclipBtn = Instance.new("TextButton")
+noclipBtn.Size = UDim2.new(0.86, 0, 0, 42)
+noclipBtn.Position = UDim2.new(0.07, 0, 0, 50)
+noclipBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+noclipBtn.Text = "Noclip: OFF"
+noclipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+noclipBtn.Font = Enum.Font.GothamBold
+noclipBtn.TextSize = 16
+noclipBtn.Parent = card
 
-local speedSliderBgCorner = Instance.new("UICorner")
-speedSliderBgCorner.CornerRadius = UDim.new(1, 0)
-speedSliderBgCorner.Parent = speedSliderBg
+local noclipCorner = Instance.new("UICorner")
+noclipCorner.CornerRadius = UDim.new(0, 10)
+noclipCorner.Parent = noclipBtn
 
-local speedFill = Instance.new("Frame")
-speedFill.Size = UDim2.new(0.16, 0, 1, 0)
-speedFill.BackgroundColor3 = Color3.fromRGB(0, 200, 90)
-speedFill.BorderSizePixel = 0
-speedFill.Parent = speedSliderBg
-
-local speedFillCorner = Instance.new("UICorner")
-speedFillCorner.CornerRadius = UDim.new(1, 0)
-speedFillCorner.Parent = speedFill
-
-local speedBtn = Instance.new("TextButton")
-speedBtn.Size = UDim2.new(0, 20, 0, 20)
-speedBtn.Position = UDim2.new(0.16, -10, 0.5, -10)
-speedBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-speedBtn.Text = ""
-speedBtn.AutoButtonColor = false
-speedBtn.Parent = speedSliderBg
-
-local speedBtnCorner = Instance.new("UICorner")
-speedBtnCorner.CornerRadius = UDim.new(1, 0)
-speedBtnCorner.Parent = speedBtn
-
-local speedMinus = Instance.new("TextButton")
-speedMinus.Size = UDim2.new(0, 80, 0, 34)
-speedMinus.Position = UDim2.new(0.08, 0, 0, 78)
-speedMinus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-speedMinus.Text = "−"
-speedMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedMinus.Font = Enum.Font.GothamBold
-speedMinus.TextSize = 24
-speedMinus.Parent = card
-
-local speedMinusCorner = Instance.new("UICorner")
-speedMinusCorner.CornerRadius = UDim.new(0, 8)
-speedMinusCorner.Parent = speedMinus
-
-local speedPlus = Instance.new("TextButton")
-speedPlus.Size = UDim2.new(0, 80, 0, 34)
-speedPlus.Position = UDim2.new(0.58, 0, 0, 78)
-speedPlus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-speedPlus.Text = "+"
-speedPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedPlus.Font = Enum.Font.GothamBold
-speedPlus.TextSize = 24
-speedPlus.Parent = card
-
-local speedPlusCorner = Instance.new("UICorner")
-speedPlusCorner.CornerRadius = UDim.new(0, 8)
-speedPlusCorner.Parent = speedPlus
-
--- ===== JUMP =====
-local jumpLabel = Instance.new("TextLabel")
-jumpLabel.Size = UDim2.new(1, 0, 0, 26)
-jumpLabel.Position = UDim2.new(0, 0, 0, 130)
-jumpLabel.BackgroundTransparency = 1
-jumpLabel.Text = "Pulo: 50"
-jumpLabel.TextColor3 = Color3.fromRGB(210, 210, 230)
-jumpLabel.Font = Enum.Font.GothamMedium
-jumpLabel.TextSize = 16
-jumpLabel.Parent = card
-
-local jumpSliderBg = Instance.new("Frame")
-jumpSliderBg.Size = UDim2.new(0.86, 0, 0, 9)
-jumpSliderBg.Position = UDim2.new(0.07, 0, 0, 164)
-jumpSliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-jumpSliderBg.BorderSizePixel = 0
-jumpSliderBg.Parent = card
-
-local jumpSliderBgCorner = Instance.new("UICorner")
-jumpSliderBgCorner.CornerRadius = UDim.new(1, 0)
-jumpSliderBgCorner.Parent = jumpSliderBg
-
-local jumpFill = Instance.new("Frame")
-jumpFill.Size = UDim2.new(0.25, 0, 1, 0)
-jumpFill.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
-jumpFill.BorderSizePixel = 0
-jumpFill.Parent = jumpSliderBg
-
-local jumpFillCorner = Instance.new("UICorner")
-jumpFillCorner.CornerRadius = UDim.new(1, 0)
-jumpFillCorner.Parent = jumpFill
-
+-- Botão Infinite Jump
 local jumpBtn = Instance.new("TextButton")
-jumpBtn.Size = UDim2.new(0, 20, 0, 20)
-jumpBtn.Position = UDim2.new(0.25, -10, 0.5, -10)
-jumpBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-jumpBtn.Text = ""
-jumpBtn.AutoButtonColor = false
-jumpBtn.Parent = jumpSliderBg
+jumpBtn.Size = UDim2.new(0.86, 0, 0, 42)
+jumpBtn.Position = UDim2.new(0.07, 0, 0, 105)
+jumpBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+jumpBtn.Text = "Infinite Jump: OFF"
+jumpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+jumpBtn.Font = Enum.Font.GothamBold
+jumpBtn.TextSize = 16
+jumpBtn.Parent = card
 
-local jumpBtnCorner = Instance.new("UICorner")
-jumpBtnCorner.CornerRadius = UDim.new(1, 0)
-jumpBtnCorner.Parent = jumpBtn
+local jumpCorner = Instance.new("UICorner")
+jumpCorner.CornerRadius = UDim.new(0, 10)
+jumpCorner.Parent = jumpBtn
 
-local jumpMinus = Instance.new("TextButton")
-jumpMinus.Size = UDim2.new(0, 80, 0, 34)
-jumpMinus.Position = UDim2.new(0.08, 0, 0, 196)
-jumpMinus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-jumpMinus.Text = "−"
-jumpMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-jumpMinus.Font = Enum.Font.GothamBold
-jumpMinus.TextSize = 24
-jumpMinus.Parent = card
+-- Botão Fly
+local flyBtn = Instance.new("TextButton")
+flyBtn.Size = UDim2.new(0.86, 0, 0, 42)
+flyBtn.Position = UDim2.new(0.07, 0, 0, 160)
+flyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+flyBtn.Text = "Fly: OFF"
+flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+flyBtn.Font = Enum.Font.GothamBold
+flyBtn.TextSize = 16
+flyBtn.Parent = card
 
-local jumpMinusCorner = Instance.new("UICorner")
-jumpMinusCorner.CornerRadius = UDim.new(0, 8)
-jumpMinusCorner.Parent = jumpMinus
+local flyCorner = Instance.new("UICorner")
+flyCorner.CornerRadius = UDim.new(0, 10)
+flyCorner.Parent = flyBtn
 
-local jumpPlus = Instance.new("TextButton")
-jumpPlus.Size = UDim2.new(0, 80, 0, 34)
-jumpPlus.Position = UDim2.new(0.58, 0, 0, 196)
-jumpPlus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-jumpPlus.Text = "+"
-jumpPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-jumpPlus.Font = Enum.Font.GothamBold
-jumpPlus.TextSize = 24
-jumpPlus.Parent = card
-
-local jumpPlusCorner = Instance.new("UICorner")
-jumpPlusCorner.CornerRadius = UDim.new(0, 8)
-jumpPlusCorner.Parent = jumpPlus
-
--- Resize handle
+-- Resize
 local resizeHandle = Instance.new("TextButton")
 resizeHandle.Size = UDim2.new(0, 22, 0, 22)
 resizeHandle.Position = UDim2.new(1, -22, 1, -22)
@@ -310,93 +223,139 @@ resizeCorner.CornerRadius = UDim.new(0, 6)
 resizeCorner.Parent = resizeHandle
 
 -- Variáveis
-local currentSpeed = 16
-local currentJump = 50
-local maxSpeed = 120
-local maxJump = 200
-local draggingSpeed = false
-local draggingJump = false
-local resizing = false
-local draggingWindow = false
+local noclipEnabled = false
+local infJumpEnabled = false
+local flyEnabled = false
+local flySpeed = 50
+local bodyVelocity
 local aberto = false
+local draggingWindow = false
+local resizing = false
 local dragStart, startPos, resizeStart, sizeStart
+local noclipConnection
+local flyConnection
 
-local function applySpeed(value)
-	currentSpeed = math.clamp(math.floor(value + 0.5), 1, maxSpeed)
-	speedLabel.Text = "Velocidade: " .. currentSpeed
-	local percent = currentSpeed / maxSpeed
-	speedFill.Size = UDim2.new(percent, 0, 1, 0)
-	speedBtn.Position = UDim2.new(percent, -10, 0.5, -10)
+-- Funções
+local function setNoclip(state)
+	noclipEnabled = state
+	noclipBtn.Text = "Noclip: " .. (state and "ON" or "OFF")
+	noclipBtn.BackgroundColor3 = state and Color3.fromRGB(0, 140, 70) or Color3.fromRGB(35, 35, 45)
+
+	if noclipConnection then
+		noclipConnection:Disconnect()
+		noclipConnection = nil
+	end
+
+	if state then
+		noclipConnection = RunService.Stepped:Connect(function()
+			local char = player.Character
+			if char then
+				for _, part in pairs(char:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CanCollide = false
+					end
+				end
+			end
+		end)
+	end
+end
+
+local function setInfJump(state)
+	infJumpEnabled = state
+	jumpBtn.Text = "Infinite Jump: " .. (state and "ON" or "OFF")
+	jumpBtn.BackgroundColor3 = state and Color3.fromRGB(0, 140, 70) or Color3.fromRGB(35, 35, 45)
+end
+
+local function setFly(state)
+	flyEnabled = state
+	flyBtn.Text = "Fly: " .. (state and "ON" or "OFF")
+	flyBtn.BackgroundColor3 = state and Color3.fromRGB(0, 140, 70) or Color3.fromRGB(35, 35, 45)
 
 	local char = player.Character
-	if char then
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.WalkSpeed = currentSpeed
+	if not char then return end
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if not hrp or not humanoid then return end
+
+	if flyConnection then
+		flyConnection:Disconnect()
+		flyConnection = nil
+	end
+	if bodyVelocity then
+		bodyVelocity:Destroy()
+		bodyVelocity = nil
+	end
+
+	if state then
+		bodyVelocity = Instance.new("BodyVelocity")
+		bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+		bodyVelocity.Velocity = Vector3.zero
+		bodyVelocity.Parent = hrp
+
+		flyConnection = RunService.RenderStepped:Connect(function()
+			if not flyEnabled or not bodyVelocity then return end
+			local cam = workspace.CurrentCamera
+			local move = Vector3.zero
+
+			if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+				move = move + cam.CFrame.LookVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+				move = move - cam.CFrame.LookVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+				move = move - cam.CFrame.RightVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+				move = move + cam.CFrame.RightVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+				move = move + Vector3.new(0, 1, 0)
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+				move = move - Vector3.new(0, 1, 0)
+			end
+
+			if move.Magnitude > 0 then
+				bodyVelocity.Velocity = move.Unit * flySpeed
+			else
+				bodyVelocity.Velocity = Vector3.zero
+			end
+		end)
+	else
+		if humanoid then
+			humanoid.PlatformStand = false
 		end
 	end
 end
 
-local function applyJump(value)
-	currentJump = math.clamp(math.floor(value + 0.5), 1, maxJump)
-	jumpLabel.Text = "Pulo: " .. currentJump
-	local percent = currentJump / maxJump
-	jumpFill.Size = UDim2.new(percent, 0, 1, 0)
-	jumpBtn.Position = UDim2.new(percent, -10, 0.5, -10)
+-- Botões
+noclipBtn.MouseButton1Click:Connect(function()
+	setNoclip(not noclipEnabled)
+end)
 
-	local char = player.Character
-	if char then
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.JumpPower = currentJump
-			hum.UseJumpPower = true
+jumpBtn.MouseButton1Click:Connect(function()
+	setInfJump(not infJumpEnabled)
+end)
+
+flyBtn.MouseButton1Click:Connect(function()
+	setFly(not flyEnabled)
+end)
+
+-- Infinite Jump
+UserInputService.JumpRequest:Connect(function()
+	if infJumpEnabled then
+		local char = player.Character
+		if char then
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
 		end
 	end
-end
-
-local function updateSpeedSlider(x)
-	local absPos = speedSliderBg.AbsolutePosition.X
-	local absSize = speedSliderBg.AbsoluteSize.X
-	local relative = math.clamp((x - absPos) / absSize, 0, 1)
-	applySpeed(relative * maxSpeed)
-end
-
-local function updateJumpSlider(x)
-	local absPos = jumpSliderBg.AbsolutePosition.X
-	local absSize = jumpSliderBg.AbsoluteSize.X
-	local relative = math.clamp((x - absPos) / absSize, 0, 1)
-	applyJump(relative * maxJump)
-end
-
--- Speed slider
-speedBtn.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingSpeed = true
-		updateSpeedSlider(input.Position.X)
-	end
-end)
-speedSliderBg.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingSpeed = true
-		updateSpeedSlider(input.Position.X)
-	end
 end)
 
--- Jump slider
-jumpBtn.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingJump = true
-		updateJumpSlider(input.Position.X)
-	end
-end)
-jumpSliderBg.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingJump = true
-		updateJumpSlider(input.Position.X)
-	end
-end)
-
--- Arrastar janela
+-- Arrastar
 dragButton.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		draggingWindow = true
@@ -405,7 +364,6 @@ dragButton.InputBegan:Connect(function(input)
 	end
 end)
 
--- Resize
 resizeHandle.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		resizing = true
@@ -416,16 +374,14 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		if draggingSpeed then updateSpeedSlider(input.Position.X) end
-		if draggingJump then updateJumpSlider(input.Position.X) end
 		if draggingWindow then
 			local delta = input.Position - dragStart
 			window.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 		end
 		if resizing then
 			local delta = input.Position - resizeStart
-			local newW = math.clamp(sizeStart.X.Offset + delta.X, 280, 550)
-			local newH = math.clamp(sizeStart.Y.Offset + delta.Y, 300, 500)
+			local newW = math.clamp(sizeStart.X.Offset + delta.X, 280, 500)
+			local newH = math.clamp(sizeStart.Y.Offset + delta.Y, 240, 450)
 			window.Size = UDim2.new(0, newW, 0, newH)
 		end
 	end
@@ -433,17 +389,10 @@ end)
 
 UserInputService.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingSpeed = false
-		draggingJump = false
 		draggingWindow = false
 		resizing = false
 	end
 end)
-
-speedMinus.MouseButton1Click:Connect(function() applySpeed(currentSpeed - 5) end)
-speedPlus.MouseButton1Click:Connect(function() applySpeed(currentSpeed + 5) end)
-jumpMinus.MouseButton1Click:Connect(function() applyJump(currentJump - 5) end)
-jumpPlus.MouseButton1Click:Connect(function() applyJump(currentJump + 5) end)
 
 minBtn.MouseButton1Click:Connect(function()
 	aberto = false
@@ -451,40 +400,21 @@ minBtn.MouseButton1Click:Connect(function()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
+	setNoclip(false)
+	setInfJump(false)
+	setFly(false)
 	screenGui:Destroy()
 end)
 
 icon.MouseButton1Click:Connect(function()
 	aberto = not aberto
 	window.Visible = aberto
-	if aberto then
-		local char = player.Character
-		if char then
-			local hum = char:FindFirstChildOfClass("Humanoid")
-			if hum then
-				applySpeed(hum.WalkSpeed)
-				applyJump(hum.JumpPower)
-			end
-		end
-	end
 end)
 
-player.CharacterAdded:Connect(function(char)
-	task.wait(0.4)
-	local hum = char:WaitForChild("Humanoid", 5)
-	if hum then
-		hum.WalkSpeed = currentSpeed
-		hum.JumpPower = currentJump
-		hum.UseJumpPower = true
-	end
+player.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	if noclipEnabled then setNoclip(true) end
+	if flyEnabled then setFly(true) end
 end)
 
-if player.Character then
-	local hum = player.Character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		applySpeed(hum.WalkSpeed)
-		applyJump(hum.JumpPower)
-	end
-end
-
-print("✅ MX HUB Speed + Jump carregado")
+print("✅ MX HUB FE (R6) carregado")
