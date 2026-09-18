@@ -1,25 +1,1404 @@
 --[[
-    𝐌𝐗 𝐇𝐔𝐁
-    Estilo Coquette • Dark Modern
-    Ícone: rbxassetid://106023300176700
---]]
+    ╔══════════════════════════════════════════════════╗
+    ║              ¶ MX HUB ¶                          ║
+    ║              Mobile Edition - Delta              ║
+    ║              Versão: 9.0 Green Edition           ║
+    ╚══════════════════════════════════════════════════╝
+]]
 
-if getgenv().MXHUB_Loaded then
-    warn("[MX HUB] Já carregado!")
-    return
-end
-getgenv().MXHUB_Loaded = true
-
--- Serviços
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local TweenService      = game:GetService("TweenService")
+local CoreGui           = game:GetService("CoreGui")
+local Lighting          = game:GetService("Lighting")
+local TeleportService   = game:GetService("TeleportService")
+local StarterGui        = game:GetService("StarterGui")
+local HttpService       = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
+local Camera      = workspace.CurrentCamera
 
--- ... [notificação estilo Coquette]
--- ... [ScreenGui com abas]
--- ... [Toggle / Slider / Button / Section]
--- ... [Lógica Player/Visuals/Misc/Settings]
+local CONFIG = {
+    Title       = "¶ MX HUB ¶",
+    Version     = "v9.0",
+    IconId      = "rbxassetid://106023300176700",
+    Green       = Color3.fromRGB(0, 255, 127),
+    GreenDark   = Color3.fromRGB(0, 200, 90),
+    GreenLight  = Color3.fromRGB(150, 255, 200),
+    BgMain      = Color3.fromRGB(15, 25, 18),
+    BgSecondary = Color3.fromRGB(22, 35, 26),
+    BgTertiary  = Color3.fromRGB(30, 48, 36),
+    BgHover     = Color3.fromRGB(42, 65, 50),
+    Text        = Color3.fromRGB(230, 255, 240),
+    TextDim     = Color3.fromRGB(150, 200, 170),
+    Black       = Color3.fromRGB(0, 0, 0),
+    Font        = Enum.Font.GothamMedium,
+    FontBold    = Enum.Font.GothamBold,
+    FontSemi    = Enum.Font.GothamSemiBold,
+}
+
+local State = {
+    Gui       = nil,
+    Main      = nil,
+    ToggleBtn = nil,
+    IsOpen    = true,
+    ActiveTab = nil,
+    Tabs      = {},
+    Toggles   = {},
+    Flags     = {},
+    Loops     = {},
+}
+
+local function Create(class, props)
+    local inst = Instance.new(class)
+    for k, v in pairs(props or {}) do
+        inst[k] = v
+    end
+    return inst
+end
+
+local function Corner(parent, radius)
+    return Create("UICorner", {
+        Parent = parent,
+        CornerRadius = UDim.new(0, radius or 8),
+    })
+end
+
+local function Stroke(parent, color, thickness, transparency)
+    return Create("UIStroke", {
+        Parent = parent,
+        Color = color or CONFIG.Green,
+        Thickness = thickness or 1,
+        Transparency = transparency or 0.3,
+    })
+end
+
+local function GetParentGui()
+    local ok, hui = pcall(function() return gethui() end)
+    if ok and hui then return hui end
+    return CoreGui
+end
+
+pcall(function()
+    local old = CoreGui:FindFirstChild("MXHub")
+    if old then old:Destroy() end
+end)
+pcall(function()
+    if gethui then
+        local old = gethui():FindFirstChild("MXHub")
+        if old then old:Destroy() end
+    end
+end)
+
+local ScreenGui = Create("ScreenGui", {
+    Name = "MXHub",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    DisplayOrder = 999,
+})
+ScreenGui.Parent = GetParentGui()
+State.Gui = ScreenGui
+
+local ToggleBtn = Create("TextButton", {
+    Name = "IconToggle",
+    Parent = ScreenGui,
+    Size = UDim2.new(0, 58, 0, 58),
+    Position = UDim2.new(0, 20, 0.5, -29),
+    BackgroundColor3 = CONFIG.BgMain,
+    Text = "",
+    AutoButtonColor = false,
+    Active = true,
+    ZIndex = 100,
+})
+Corner(ToggleBtn, 29)
+Stroke(ToggleBtn, CONFIG.Green, 2, 0)
+
+Create("ImageLabel", {
+    Parent = ToggleBtn,
+    Size = UDim2.new(0, 46, 0, 46),
+    Position = UDim2.new(0.5, -23, 0.5, -23),
+    BackgroundTransparency = 1,
+    Image = CONFIG.IconId,
+    ScaleType = Enum.ScaleType.Fit,
+    ZIndex = 101,
+})
+
+local GlowEffect = Create("ImageLabel", {
+    Parent = ScreenGui,
+    Size = UDim2.new(0, 90, 0, 90),
+    Position = UDim2.new(0, 4, 0.5, -45),
+    BackgroundTransparency = 1,
+    Image = "rbxassetid://5028857084",
+    ImageColor3 = CONFIG.Green,
+    ImageTransparency = 0.7,
+    ZIndex = 99,
+})
+
+State.ToggleBtn = ToggleBtn
+
+task.spawn(function()
+    while ToggleBtn.Parent do
+        TweenService:Create(GlowEffect, TweenInfo.new(1.5, Enum.EasingStyle.Sine), {
+            Size = UDim2.new(0, 100, 0, 100),
+            Position = UDim2.new(0, -1, 0.5, -50),
+            ImageTransparency = 0.9,
+        }):Play()
+        task.wait(1.5)
+        TweenService:Create(GlowEffect, TweenInfo.new(1.5, Enum.EasingStyle.Sine), {
+            Size = UDim2.new(0, 90, 0, 90),
+            Position = UDim2.new(0, 4, 0.5, -45),
+            ImageTransparency = 0.7,
+        }):Play()
+        task.wait(1.5)
+    end
+end)
+
+local Main = Create("Frame", {
+    Name = "MainPanel",
+    Parent = ScreenGui,
+    Size = UDim2.new(0, 560, 0, 380),
+    Position = UDim2.new(0.5, -280, 0.5, -190),
+    BackgroundColor3 = CONFIG.BgMain,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+    Active = true,
+    ZIndex = 50,
+})
+Corner(Main, 14)
+Stroke(Main, CONFIG.Green, 1.5, 0.2)
+State.Main = Main
+
+local TopBar = Create("Frame", {
+    Name = "TopBar",
+    Parent = Main,
+    Size = UDim2.new(1, 0, 0, 46),
+    BackgroundColor3 = CONFIG.BgSecondary,
+    BorderSizePixel = 0,
+    ZIndex = 51,
+})
+Corner(TopBar, 14)
+Create("Frame", {
+    Parent = TopBar,
+    Size = UDim2.new(1, 0, 0, 14),
+    Position = UDim2.new(0, 0, 1, -14),
+    BackgroundColor3 = CONFIG.BgSecondary,
+    BorderSizePixel = 0,
+    ZIndex = 51,
+})
+
+Create("ImageLabel", {
+    Parent = TopBar,
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(0, 12, 0.5, -15),
+    BackgroundTransparency = 1,
+    Image = CONFIG.IconId,
+    ScaleType = Enum.ScaleType.Fit,
+    ZIndex = 52,
+})
+
+local TitleLbl = Create("TextLabel", {
+    Parent = TopBar,
+    Size = UDim2.new(1, -220, 1, 0),
+    Position = UDim2.new(0, 50, 0, 0),
+    BackgroundTransparency = 1,
+    Text = CONFIG.Title,
+    TextColor3 = CONFIG.Green,
+    Font = CONFIG.FontBold,
+    TextSize = 17,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 52,
+})
+
+Create("TextLabel", {
+    Parent = TopBar,
+    Size = UDim2.new(0, 60, 1, 0),
+    Position = UDim2.new(1, -170, 0, 0),
+    BackgroundTransparency = 1,
+    Text = CONFIG.Version,
+    TextColor3 = CONFIG.TextDim,
+    Font = CONFIG.FontSemi,
+    TextSize = 12,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    ZIndex = 52,
+})
+
+local MinBtn = Create("TextButton", {
+    Parent = TopBar,
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -108, 0.5, -15),
+    BackgroundColor3 = CONFIG.BgTertiary,
+    Text = "—",
+    TextColor3 = CONFIG.Text,
+    Font = CONFIG.FontBold,
+    TextSize = 18,
+    AutoButtonColor = false,
+    ZIndex = 53,
+})
+Corner(MinBtn, 8)
+
+local CloseBtn = Create("TextButton", {
+    Parent = TopBar,
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -70, 0.5, -15),
+    BackgroundColor3 = CONFIG.GreenDark,
+    Text = "✕",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = CONFIG.FontBold,
+    TextSize = 14,
+    AutoButtonColor = false,
+    ZIndex = 53,
+})
+Corner(CloseBtn, 8)
+
+local function AddHover(btn, normal, hover)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = hover }):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = normal }):Play()
+    end)
+end
+
+AddHover(MinBtn, CONFIG.BgTertiary, CONFIG.BgHover)
+AddHover(CloseBtn, CONFIG.GreenDark, Color3.fromRGB(0, 255, 120))
+
+local Sidebar = Create("Frame", {
+    Name = "Sidebar",
+    Parent = Main,
+    Size = UDim2.new(0, 145, 1, -58),
+    Position = UDim2.new(0, 8, 0, 52),
+    BackgroundColor3 = CONFIG.BgSecondary,
+    BorderSizePixel = 0,
+    ZIndex = 51,
+})
+Corner(Sidebar, 10)
+
+local SidebarScroll = Create("ScrollingFrame", {
+    Parent = Sidebar,
+    Size = UDim2.new(1, 0, 1, -28),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 2,
+    ScrollBarImageColor3 = CONFIG.Green,
+    CanvasSize = UDim2.new(0, 0, 0, 0),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+})
+
+Create("UIListLayout", {
+    Parent = SidebarScroll,
+    Padding = UDim.new(0, 5),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+})
+
+Create("UIPadding", {
+    Parent = SidebarScroll,
+    PaddingTop = UDim.new(0, 8),
+    PaddingLeft = UDim.new(0, 8),
+    PaddingRight = UDim.new(0, 8),
+})
+
+Create("TextLabel", {
+    Parent = Sidebar,
+    Size = UDim2.new(1, -16, 0, 20),
+    Position = UDim2.new(0, 8, 1, -26),
+    BackgroundTransparency = 1,
+    Text = "by MX Hub",
+    TextColor3 = CONFIG.GreenDark,
+    Font = CONFIG.FontSemi,
+    TextSize = 10,
+    ZIndex = 52,
+})
+
+local Content = Create("Frame", {
+    Name = "Content",
+    Parent = Main,
+    Size = UDim2.new(1, -169, 1, -58),
+    Position = UDim2.new(0, 161, 0, 52),
+    BackgroundColor3 = CONFIG.BgSecondary,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+    ZIndex = 51,
+})
+Corner(Content, 10)
+
+local Tabs = {}
+State.Tabs = Tabs
+
+local function CreateTab(name, icon)
+    if Tabs[name] then return Tabs[name] end
+
+    local TabBtn = Create("TextButton", {
+        Parent = SidebarScroll,
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = CONFIG.BgTertiary,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 52,
+    })
+    Corner(TabBtn, 8)
+
+    local Indicator = Create("Frame", {
+        Parent = TabBtn,
+        Size = UDim2.new(0, 3, 0.6, 0),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = CONFIG.Green,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 53,
+    })
+    Corner(Indicator, 2)
+
+    local TabLabel = Create("TextLabel", {
+        Parent = TabBtn,
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 14, 0, 0),
+        BackgroundTransparency = 1,
+        Text = (icon or "✦") .. "  " .. name,
+        TextColor3 = CONFIG.Text,
+        Font = CONFIG.FontSemi,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 53,
+    })
+
+    local TabContent = Create("ScrollingFrame", {
+        Parent = Content,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = CONFIG.Green,
+        ScrollBarImageTransparency = 0.2,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        Visible = false,
+        ZIndex = 52,
+    })
+
+    Create("UIListLayout", {
+        Parent = TabContent,
+        Padding = UDim.new(0, 6),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    Create("UIPadding", {
+        Parent = TabContent,
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 20),
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+    })
+
+    local tab = {
+        Button = TabBtn,
+        Label = TabLabel,
+        Content = TabContent,
+        Indicator = Indicator,
+        Name = name,
+    }
+    Tabs[name] = tab
+
+    TabBtn.MouseEnter:Connect(function()
+        if State.ActiveTab ~= name then
+            TweenService:Create(TabBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = CONFIG.BgHover,
+            }):Play()
+        end
+    end)
+
+    TabBtn.MouseLeave:Connect(function()
+        if State.ActiveTab ~= name then
+            TweenService:Create(TabBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = CONFIG.BgTertiary,
+            }):Play()
+        end
+    end)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, t in pairs(Tabs) do
+            t.Content.Visible = false
+            t.Indicator.Visible = false
+            TweenService:Create(t.Button, TweenInfo.new(0.2), {
+                BackgroundColor3 = CONFIG.BgTertiary,
+            }):Play()
+            TweenService:Create(t.Label, TweenInfo.new(0.2), {
+                TextColor3 = CONFIG.Text,
+            }):Play()
+        end
+
+        TabContent.Visible = true
+        Indicator.Visible = true
+
+        TweenService:Create(TabBtn, TweenInfo.new(0.2), {
+            BackgroundColor3 = CONFIG.BgHover,
+        }):Play()
+        TweenService:Create(TabLabel, TweenInfo.new(0.2), {
+            TextColor3 = CONFIG.Green,
+        }):Play()
+
+        State.ActiveTab = name
+    end)
+
+    return tab
+end
+
+local function CreateSection(tab, title)
+    Create("TextLabel", {
+        Parent = tab.Content,
+        Size = UDim2.new(1, 0, 0, 24),
+        BackgroundTransparency = 1,
+        Text = "✦ " .. title,
+        TextColor3 = CONFIG.Green,
+        Font = CONFIG.FontBold,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    Create("Frame", {
+        Parent = tab.Content,
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = CONFIG.Green,
+        BackgroundTransparency = 0.7,
+        BorderSizePixel = 0,
+    })
+end
+
+local function CreateButton(tab, text, callback)
+    local Btn = Create("TextButton", {
+        Parent = tab.Content,
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = CONFIG.BgTertiary,
+        Text = text,
+        TextColor3 = CONFIG.Text,
+        Font = CONFIG.FontSemi,
+        TextSize = 12,
+        AutoButtonColor = false,
+    })
+    Corner(Btn, 8)
+    Stroke(Btn, CONFIG.Green, 1, 0.6)
+
+    Btn.MouseEnter:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = CONFIG.BgHover,
+        }):Play()
+    end)
+    Btn.MouseLeave:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = CONFIG.BgTertiary,
+        }):Play()
+    end)
+
+    Btn.MouseButton1Click:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.1), {
+            BackgroundColor3 = CONFIG.Green,
+        }):Play()
+        task.delay(0.15, function()
+            TweenService:Create(Btn, TweenInfo.new(0.2), {
+                BackgroundColor3 = CONFIG.BgTertiary,
+            }):Play()
+        end)
+        pcall(callback)
+    end)
+
+    return Btn
+end
+
+local function CreateToggle(tab, text, default, callback)
+    local Container = Create("Frame", {
+        Parent = tab.Content,
+        Size = UDim2.new(1, 0, 0, 34),
+        BackgroundColor3 = CONFIG.BgTertiary,
+        BorderSizePixel = 0,
+    })
+    Corner(Container, 8)
+    Stroke(Container, CONFIG.Green, 1, 0.6)
+
+    Create("TextLabel", {
+        Parent = Container,
+        Size = UDim2.new(1, -80, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = CONFIG.Text,
+        Font = CONFIG.FontSemi,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+
+    local Switch = Create("TextButton", {
+        Parent = Container,
+        Size = UDim2.new(0, 44, 0, 20),
+        Position = UDim2.new(1, -56, 0.5, -10),
+        BackgroundColor3 = Color3.fromRGB(60, 70, 65),
+        Text = "",
+        AutoButtonColor = false,
+    })
+    Corner(Switch, 10)
+
+    local Knob = Create("Frame", {
+        Parent = Switch,
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(0, 2, 0.5, -8),
+        BackgroundColor3 = CONFIG.Text,
+        BorderSizePixel = 0,
+    })
+    Corner(Knob, 8)
+
+    local enabled = default or false
+    State.Toggles[text] = enabled
+    State.Flags[text] = enabled
+
+    local function SetState(newState, fire)
+        enabled = newState
+        State.Toggles[text] = newState
+        State.Flags[text] = newState
+
+        TweenService:Create(Switch, TweenInfo.new(0.22), {
+            BackgroundColor3 = newState and CONFIG.GreenDark or Color3.fromRGB(60, 70, 65),
+        }):Play()
+
+        TweenService:Create(Knob, TweenInfo.new(0.22), {
+            Position = newState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+        }):Play()
+
+        if fire and callback then
+            task.spawn(function()
+                pcall(callback, newState)
+            end)
+        end
+    end
+
+    Switch.MouseButton1Click:Connect(function()
+        SetState(not enabled, true)
+    end)
+
+    SetState(enabled, false)
+    return { Set = SetState, Get = function() return enabled end }
+end
+local function CreateSlider(tab, text, min, max, default, callback)
+    local Container = Create("Frame", {
+        Parent = tab.Content,
+        Size = UDim2.new(1, 0, 0, 50),
+        BackgroundColor3 = CONFIG.BgTertiary,
+        BorderSizePixel = 0,
+    })
+    Corner(Container, 8)
+    Stroke(Container, CONFIG.Green, 1, 0.6)
+
+    local Label = Create("TextLabel", {
+        Parent = Container,
+        Size = UDim2.new(1, -20, 0, 20),
+        Position = UDim2.new(0, 12, 0, 4),
+        BackgroundTransparency = 1,
+        Text = text .. ":  " .. tostring(default),
+        TextColor3 = CONFIG.Text,
+        Font = CONFIG.FontSemi,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+
+    local BarBg = Create("Frame", {
+        Parent = Container,
+        Size = UDim2.new(1, -24, 0, 8),
+        Position = UDim2.new(0, 12, 0, 32),
+        BackgroundColor3 = Color3.fromRGB(60, 70, 65),
+        BorderSizePixel = 0,
+    })
+    Corner(BarBg, 4)
+
+    local BarFill = Create("Frame", {
+        Parent = BarBg,
+        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+        BackgroundColor3 = CONFIG.GreenDark,
+        BorderSizePixel = 0,
+    })
+    Corner(BarFill, 4)
+
+    local Dot = Create("Frame", {
+        Parent = BarBg,
+        Size = UDim2.new(0, 14, 0, 14),
+        Position = UDim2.new((default - min) / (max - min), -7, 0.5, -7),
+        BackgroundColor3 = CONFIG.Green,
+        BorderSizePixel = 0,
+        ZIndex = 2,
+    })
+    Corner(Dot, 7)
+
+    local value = default
+    local dragging = false
+
+    local function SetValue(v, fire)
+        value = math.clamp(math.floor(v * 100 + 0.5) / 100, min, max)
+        local pct = (value - min) / (max - min)
+        Label.Text = text .. ":  " .. tostring(value)
+
+        TweenService:Create(BarFill, TweenInfo.new(0.1), {
+            Size = UDim2.new(pct, 0, 1, 0),
+        }):Play()
+        TweenService:Create(Dot, TweenInfo.new(0.1), {
+            Position = UDim2.new(pct, -7, 0.5, -7),
+        }):Play()
+
+        if fire and callback then pcall(callback, value) end
+    end
+
+    BarBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch) then
+            local relX = input.Position.X - BarBg.AbsolutePosition.X
+            local pct = math.clamp(relX / BarBg.AbsoluteSize.X, 0, 1)
+            SetValue(min + (max - min) * pct, true)
+        end
+    end)
+
+    return { Set = SetValue, Get = function() return value end }
+end
+
+local function CreateLabel(tab, text)
+    return Create("TextLabel", {
+        Parent = tab.Content,
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = CONFIG.TextDim,
+        Font = CONFIG.Font,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+    })
+end
+
+local function CreateTextBox(tab, placeholder, callback)
+    local Box = Create("TextBox", {
+        Parent = tab.Content,
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = CONFIG.BgTertiary,
+        Text = "",
+        PlaceholderText = placeholder,
+        PlaceholderColor3 = CONFIG.TextDim,
+        TextColor3 = CONFIG.Text,
+        Font = CONFIG.Font,
+        TextSize = 12,
+        ClearTextOnFocus = false,
+    })
+    Corner(Box, 8)
+    Stroke(Box, CONFIG.Green, 1, 0.6)
+
+    Box.FocusLost:Connect(function(enterPressed)
+        if enterPressed and callback then
+            pcall(callback, Box.Text)
+        end
+    end)
+
+    return Box
+end
+
+local function Notify(text, duration)
+    local notif = Create("Frame", {
+        Parent = ScreenGui,
+        Size = UDim2.new(0, 270, 0, 44),
+        Position = UDim2.new(0.5, -135, 0, -60),
+        BackgroundColor3 = CONFIG.BgMain,
+        BorderSizePixel = 0,
+        ZIndex = 300,
+    })
+    Corner(notif, 10)
+    Stroke(notif, CONFIG.Green, 1.5, 0)
+
+    Create("ImageLabel", {
+        Parent = notif,
+        Size = UDim2.new(0, 28, 0, 28),
+        Position = UDim2.new(0, 10, 0.5, -14),
+        BackgroundTransparency = 1,
+        Image = CONFIG.IconId,
+        ScaleType = Enum.ScaleType.Fit,
+    })
+
+    Create("TextLabel", {
+        Parent = notif,
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 46, 0, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = CONFIG.Text,
+        Font = CONFIG.FontSemi,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+    })
+
+    TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Position = UDim2.new(0.5, -135, 0, 90),
+    }):Play()
+
+    task.delay(duration or 3, function()
+        local tw = TweenService:Create(notif, TweenInfo.new(0.3), {
+            Position = UDim2.new(0.5, -135, 0, -60),
+        })
+        tw:Play()
+        tw.Completed:Wait()
+        notif:Destroy()
+    end)
+end
+
+local function MakeDraggable(frame, dragTarget)
+    dragTarget = dragTarget or frame
+    local dragging, dragInput, dragStart, startPos
+
+    dragTarget.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    dragTarget.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+MakeDraggable(Main, TopBar)
+MakeDraggable(ToggleBtn)
+
+local function TogglePanel()
+    State.IsOpen = not State.IsOpen
+    if State.IsOpen then
+        Main.Visible = true
+        Main.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(Main, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+            Size = UDim2.new(0, 560, 0, 380),
+        }):Play()
+    else
+        local tw = TweenService:Create(Main, TweenInfo.new(0.25), {
+            Size = UDim2.new(0, 0, 0, 0),
+        })
+        tw:Play()
+        tw.Completed:Wait()
+        Main.Visible = false
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(TogglePanel)
+MinBtn.MouseButton1Click:Connect(TogglePanel)
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local HomeTab     = CreateTab("Home", "🏠")
+local PlayerTab   = CreateTab("Jogador", "👤")
+local VisualTab   = CreateTab("Visual", "👁")
+local TrollTab    = CreateTab("Troll", "😈")
+local RGBTab      = CreateTab("RGB", "🌈")
+local MusicTab    = CreateTab("Música", "🎵")
+local ProtectTab  = CreateTab("Proteção", "🛡")
+local MiscTab     = CreateTab("Extras", "✨")
+local SettingsTab = CreateTab("Config", "⚙")
+
+task.defer(function()
+    for _, t in pairs(Tabs) do
+        t.Content.Visible = false
+        t.Indicator.Visible = false
+        t.Button.BackgroundColor3 = CONFIG.BgTertiary
+        t.Label.TextColor3 = CONFIG.Text
+    end
+    HomeTab.Content.Visible = true
+    HomeTab.Indicator.Visible = true
+    HomeTab.Button.BackgroundColor3 = CONFIG.BgHover
+    HomeTab.Label.TextColor3 = CONFIG.Green
+    State.ActiveTab = "Home"
+end)
+
+-- HOME
+CreateSection(HomeTab, "Bem-vindo ao MX Hub")
+CreateLabel(HomeTab, "✦ Hub profissional Green Edition")
+CreateLabel(HomeTab, "✦ Compatível com Delta Mobile")
+CreateLabel(HomeTab, "✦ Brookhaven RP suportado")
+
+CreateSection(HomeTab, "Ações Rápidas")
+CreateButton(HomeTab, "🌿 Notificação de Teste", function() Notify("MX Hub carregado!") end)
+CreateButton(HomeTab, "💚 Resetar Personagem", function()
+    if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() Notify("Resetado") end
+end)
+CreateButton(HomeTab, "🔄 Rejoin (Reentrar)", function()
+    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+end)
+
+-- JOGADOR
+CreateSection(PlayerTab, "Movimento")
+CreateSlider(PlayerTab, "WalkSpeed", 16, 300, 16, function(v)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").WalkSpeed = v
+    end
+end)
+CreateSlider(PlayerTab, "JumpPower", 50, 500, 50, function(v)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        hum.UseJumpPower = true
+        hum.JumpPower = v
+    end
+end)
+
+CreateSection(PlayerTab, "Características")
+CreateToggle(PlayerTab, "Infinite Jump", false, function(state)
+    if state then
+        State.Flags.InfiniteJump = UserInputService.JumpRequest:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") then
+                char:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+            end
+        end)
+        Notify("Infinite Jump ON")
+    else
+        if State.Flags.InfiniteJump then
+            State.Flags.InfiniteJump:Disconnect()
+            State.Flags.InfiniteJump = nil
+        end
+        Notify("Infinite Jump OFF")
+    end
+end)
+
+CreateToggle(PlayerTab, "Noclip", false, function(state)
+    State.Flags.Noclip = state
+    Notify("Noclip " .. (state and "ON" or "OFF"))
+end)
+
+task.spawn(function()
+    RunService.Stepped:Connect(function()
+        if State.Flags.Noclip and LocalPlayer.Character then
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end)
+-- VISUAL
+CreateSection(VisualTab, "Iluminação")
+CreateToggle(VisualTab, "Fullbright", false, function(state)
+    if state then
+        State.Flags.OldBrightness = Lighting.Brightness
+        State.Flags.OldFogEnd = Lighting.FogEnd
+        State.Flags.OldClockTime = Lighting.ClockTime
+        Lighting.Brightness = 3
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Notify("Fullbright ON")
+    else
+        Lighting.Brightness = State.Flags.OldBrightness or 1
+        Lighting.FogEnd = State.Flags.OldFogEnd or 1000
+        Lighting.ClockTime = State.Flags.OldClockTime or 14
+        Lighting.GlobalShadows = true
+        Notify("Fullbright OFF")
+    end
+end)
+
+-- ═══════════════════════════════════════════════════
+--       BROOKHAVEN RP — NOME + BIO + RGB REAL
+-- ═══════════════════════════════════════════════════
+
+local BrookRemotes = { Text = nil, Color = nil }
+
+task.spawn(function()
+    local RE = ReplicatedStorage:WaitForChild("RE", 5)
+    if not RE then return end
+    BrookRemotes.Text  = RE:WaitForChild("1RPNam1eTex1t", 5)
+    BrookRemotes.Color = RE:WaitForChild("1RPNam1eColo1r", 5)
+end)
+
+local function BrookSetName(nome)
+    if not BrookRemotes.Text then return false end
+    pcall(function() BrookRemotes.Text:FireServer("RolePlayName", nome) end)
+    return true
+end
+
+local function BrookSetBio(bio)
+    if not BrookRemotes.Text then return false end
+    pcall(function() BrookRemotes.Text:FireServer("RolePlayBio", bio) end)
+    return true
+end
+
+local function BrookSetNameColor(cor)
+    if not BrookRemotes.Color then return false end
+    pcall(function() BrookRemotes.Color:FireServer("PickingRPNameColor", cor) end)
+    return true
+end
+
+local function BrookSetBioColor(cor)
+    if not BrookRemotes.Color then return false end
+    pcall(function() BrookRemotes.Color:FireServer("PickingRPBioColor", cor) end)
+    return true
+end
+
+local AUTO_NAME = "Usuário / MX HUB"
+local AUTO_BIO  = "HUB ainda em Beta"
+
+task.spawn(function()
+    task.wait(0.7)
+    BrookSetName(AUTO_NAME)
+    task.wait(0.1)
+    BrookSetNameColor(CONFIG.Green)
+    task.wait(0.2)
+    BrookSetBio(AUTO_BIO)
+    task.wait(0.1)
+    BrookSetBioColor(CONFIG.Black)
+    Notify("Nome + Bio aplicados ✦")
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.7)
+    BrookSetName(AUTO_NAME)
+    task.wait(0.1)
+    BrookSetNameColor(CONFIG.Green)
+    task.wait(0.2)
+    BrookSetBio(AUTO_BIO)
+    task.wait(0.1)
+    BrookSetBioColor(CONFIG.Black)
+end)
+
+-- TROLL
+CreateSection(TrollTab, "Nome RP — Brookhaven")
+CreateButton(TrollTab, "💚 Aplicar Nome Padrão", function()
+    BrookSetName(AUTO_NAME)
+    BrookSetNameColor(CONFIG.Green)
+    Notify("Nome aplicado!")
+end)
+CreateButton(TrollTab, "🖤 Aplicar Bio Padrão", function()
+    BrookSetBio(AUTO_BIO)
+    BrookSetBioColor(CONFIG.Black)
+    Notify("Bio aplicada!")
+end)
+
+CreateSection(TrollTab, "Nome Personalizado")
+local nameBox = CreateTextBox(TrollTab, "Digite o novo nome RP...")
+CreateButton(TrollTab, "✔ Aplicar Nome", function()
+    if nameBox.Text ~= "" then
+        BrookSetName(nameBox.Text)
+        Notify("Nome: " .. nameBox.Text)
+    else
+        Notify("Digite um nome primeiro!")
+    end
+end)
+
+CreateSection(TrollTab, "Bio Personalizada")
+local bioBox = CreateTextBox(TrollTab, "Digite a nova bio...")
+CreateButton(TrollTab, "✔ Aplicar Bio", function()
+    if bioBox.Text ~= "" then
+        BrookSetBio(bioBox.Text)
+        Notify("Bio: " .. bioBox.Text)
+    else
+        Notify("Digite uma bio primeiro!")
+    end
+end)
+
+CreateSection(TrollTab, "Cores Rápidas")
+CreateButton(TrollTab, "💚 Verde (Nome)", function()
+    BrookSetNameColor(Color3.fromRGB(0, 255, 127))
+    Notify("Cor verde aplicada")
+end)
+CreateButton(TrollTab, "❤️ Vermelho (Nome)", function()
+    BrookSetNameColor(Color3.fromRGB(255, 0, 0))
+    Notify("Cor vermelha aplicada")
+end)
+CreateButton(TrollTab, "💙 Azul (Nome)", function()
+    BrookSetNameColor(Color3.fromRGB(0, 150, 255))
+    Notify("Cor azul aplicada")
+end)
+CreateButton(TrollTab, "💜 Roxo (Nome)", function()
+    BrookSetNameColor(Color3.fromRGB(180, 0, 255))
+    Notify("Cor roxa aplicada")
+end)
+CreateButton(TrollTab, "🖤 Preto (Bio)", function()
+    BrookSetBioColor(Color3.fromRGB(0, 0, 0))
+    Notify("Bio preta aplicada")
+end)
+
+-- RGB
+CreateSection(RGBTab, "Nome RGB 🌈")
+CreateLabel(RGBTab, "Deixa a cor do nome mudando em arco-íris")
+CreateToggle(RGBTab, "Nome RGB", false, function(state)
+    State.Flags.RPNameRGB = state
+    if state then
+        task.spawn(function()
+            local hue = 0
+            while State.Flags.RPNameRGB do
+                hue = (hue + 0.02) % 1
+                BrookSetNameColor(Color3.fromHSV(hue, 1, 1))
+                task.wait(0.15)
+            end
+        end)
+        Notify("Nome RGB ON 🌈")
+    else
+        BrookSetNameColor(CONFIG.Green)
+        Notify("Nome RGB OFF")
+    end
+end)
+
+CreateSection(RGBTab, "Bio RGB 🌈")
+CreateLabel(RGBTab, "Deixa a cor da bio mudando em arco-íris")
+CreateToggle(RGBTab, "Bio RGB", false, function(state)
+    State.Flags.RPBioRGB = state
+    if state then
+        task.spawn(function()
+            local hue = 0
+            while State.Flags.RPBioRGB do
+                hue = (hue + 0.02) % 1
+                BrookSetBioColor(Color3.fromHSV(hue, 1, 1))
+                task.wait(0.15)
+            end
+        end)
+        Notify("Bio RGB ON 🌈")
+    else
+        BrookSetBioColor(CONFIG.Black)
+        Notify("Bio RGB OFF")
+    end
+end)
+
+CreateSection(RGBTab, "Combinado 🌈🌈")
+CreateToggle(RGBTab, "Nome + Bio RGB juntos", false, function(state)
+    State.Flags.RPNameRGB = state
+    State.Flags.RPBioRGB = state
+    if state then
+        task.spawn(function()
+            local hue = 0
+            while State.Flags.RPNameRGB or State.Flags.RPBioRGB do
+                hue = (hue + 0.02) % 1
+                BrookSetNameColor(Color3.fromHSV(hue, 1, 1))
+                BrookSetBioColor(Color3.fromHSV((hue + 0.3) % 1, 1, 1))
+                task.wait(0.15)
+            end
+        end)
+        Notify("Nome + Bio RGB ON 🌈")
+    else
+        BrookSetNameColor(CONFIG.Green)
+        BrookSetBioColor(CONFIG.Black)
+        Notify("Nome + Bio RGB OFF")
+    end
+end)
+
+CreateSection(RGBTab, "Resetar")
+CreateButton(RGBTab, "💚 Nome Verde + Bio Preta", function()
+    State.Flags.RPNameRGB = false
+    State.Flags.RPBioRGB = false
+    BrookSetNameColor(CONFIG.Green)
+    BrookSetBioColor(CONFIG.Black)
+    Notify("Cores resetadas")
+end)
+
+-- ═══════════════════════════════════════════════════
+--                ABA: MÚSICA (REAL - TOCA PRA TODOS)
+-- ═══════════════════════════════════════════════════
+
+CreateSection(MusicTab, "🎵 Player de Música")
+CreateLabel(MusicTab, "Pega o Boombox e segura na mão")
+CreateLabel(MusicTab, "Cola o ID e clica em Tocar")
+
+-- Remote do Brookhaven
+local MusicRemote = nil
+task.spawn(function()
+    local RE = ReplicatedStorage:WaitForChild("RE", 10)
+    if RE then
+        MusicRemote = RE:WaitForChild("PlayerToolEvent", 10)
+    end
+end)
+
+State.Flags.MusicPlaying = false
+State.Flags.CurrentMusicID = nil
+
+-- TextBox pra ID
+local musicIDBox = CreateTextBox(MusicTab, "Cole o ID da música aqui...")
+
+-- Botão TOCAR
+CreateButton(MusicTab, "▶️ Tocar Música", function()
+    local id = musicIDBox.Text
+    
+    if id == "" then
+        Notify("⚠️ Cole um ID primeiro!")
+        return
+    end
+    
+    if not MusicRemote then
+        Notify("⚠️ Remote não carregou. Espera 2s")
+        return
+    end
+    
+    Notify("▶️ Tocando em 0.3s...")
+    
+    task.delay(0.3, function()
+        pcall(function()
+            MusicRemote:FireServer("ToolMusicText", tonumber(id) or id)
+        end)
+        
+        State.Flags.MusicPlaying = true
+        State.Flags.CurrentMusicID = id
+        Notify("🎵 Tocando: " .. id)
+    end)
+end)
+
+-- Botão PARAR
+CreateButton(MusicTab, "⏹ Parar Música", function()
+    if not MusicRemote then
+        Notify("⚠️ Remote não carregou")
+        return
+    end
+    
+    if not State.Flags.MusicPlaying then
+        Notify("Nada tocando agora")
+        return
+    end
+    
+    task.delay(0.3, function()
+        pcall(function()
+            MusicRemote:FireServer("ToolMusicStop")
+        end)
+        
+        State.Flags.MusicPlaying = false
+        State.Flags.CurrentMusicID = nil
+        Notify("⏹ Música parada")
+    end)
+end)
+
+-- Botão TROCAR
+CreateButton(MusicTab, "🔄 Trocar Música", function()
+    local id = musicIDBox.Text
+    
+    if id == "" then
+        Notify("⚠️ Cole um ID primeiro!")
+        return
+    end
+    
+    if not MusicRemote then
+        Notify("⚠️ Remote não carregou")
+        return
+    end
+    
+    Notify("🔄 Trocando música...")
+    
+    pcall(function()
+        MusicRemote:FireServer("ToolMusicStop")
+    end)
+    
+    task.delay(0.3, function()
+        pcall(function()
+            MusicRemote:FireServer("ToolMusicText", tonumber(id) or id)
+        end)
+        
+        State.Flags.MusicPlaying = true
+        State.Flags.CurrentMusicID = id
+        Notify("🎵 Nova música: " .. id)
+    end)
+end)
+
+CreateSection(MusicTab, "🎵 IDs Populares")
+
+CreateButton(MusicTab, "🎵 Without Me (Eminem)", function()
+    musicIDBox.Text = "1845732173"
+    Notify("ID colado! Clica em Tocar")
+end)
+
+CreateButton(MusicTab, "🎵 Old Town Road", function()
+    musicIDBox.Text = "6939192127"
+    Notify("ID colado! Clica em Tocar")
+end)
+
+CreateButton(MusicTab, "🎵 Heat Waves", function()
+    musicIDBox.Text = "6840131631"
+    Notify("ID colado! Clica em Tocar")
+end)
+
+CreateButton(MusicTab, "🎵 California Love", function()
+    musicIDBox.Text = "1837879081"
+    Notify("ID colado! Clica em Tocar")
+end)
+
+CreateButton(MusicTab, "🎵 Smooth Criminal", function()
+    musicIDBox.Text = "4883181281"
+    Notify("ID colado! Clica em Tocar")
+end)
+
+CreateSection(MusicTab, "ℹ️ Como Usar")
+CreateLabel(MusicTab, "1. Pega o Boombox e segura na mão")
+CreateLabel(MusicTab, "2. Cola o ID no campo acima")
+CreateLabel(MusicTab, "3. Clica em ▶️ Tocar Música")
+CreateLabel(MusicTab, "4. Toca pra TODOS no servidor 🎉")
+CreateLabel(MusicTab, "5. Pra parar, clica em ⏹")
+CreateLabel(MusicTab, "6. Pra trocar, só digita outro ID")
+
+-- ═══════════════════════════════════════════════════
+--                ABA: PROTEÇÃO
+-- ═══════════════════════════════════════════════════
+
+CreateSection(ProtectTab, "Proteções")
+CreateToggle(ProtectTab, "Anti Fling", false, function(state)
+    State.Flags.AntiFling = state
+    Notify("Anti Fling " .. (state and "ON" or "OFF"))
+end)
+
+task.spawn(function()
+    RunService.Heartbeat:Connect(function()
+        if State.Flags.AntiFling and LocalPlayer.Character then
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, child in ipairs(hrp:GetChildren()) do
+                    if child:IsA("BodyVelocity") or child:IsA("BodyAngularVelocity") then
+                        pcall(function() child:Destroy() end)
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+CreateToggle(ProtectTab, "Anti Sit", false, function(state)
+    State.Flags.AntiSit = state
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    if state then
+        pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end)
+        Notify("Anti Sit ON")
+    else
+        pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true) end)
+        Notify("Anti Sit OFF")
+    end
+end)
+
+task.spawn(function()
+    RunService.Heartbeat:Connect(function()
+        if State.Flags.AntiSit and LocalPlayer.Character then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if hum.Sit then hum.Sit = false end
+                if hum:GetState() == Enum.HumanoidStateType.Seated then
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end
+    end)
+end)
+
+CreateToggle(ProtectTab, "Anti Void", false, function(state)
+    State.Flags.AntiVoid = state
+    Notify("Anti Void " .. (state and "ON" or "OFF"))
+end)
+
+task.spawn(function()
+    RunService.Heartbeat:Connect(function()
+        if State.Flags.AntiVoid and LocalPlayer.Character then
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and hrp.Position.Y < -50 then
+                hrp.CFrame = CFrame.new(-200, 25, 100)
+            end
+        end
+    end)
+end)
+
+CreateSection(ProtectTab, "Ações Rápidas")
+CreateButton(ProtectTab, "🛡 Ativar Todas", function()
+    State.Flags.AntiFling = true
+    State.Flags.AntiSit = true
+    State.Flags.AntiVoid = true
+    Notify("Todas proteções ON")
+end)
+CreateButton(ProtectTab, "❌ Desativar Todas", function()
+    State.Flags.AntiFling = false
+    State.Flags.AntiSit = false
+    State.Flags.AntiVoid = false
+    Notify("Proteções OFF")
+end)
+
+-- EXTRAS
+CreateSection(MiscTab, "Informações")
+CreateButton(MiscTab, "📋 Copiar ID do Jogo", function()
+    if setclipboard then
+        setclipboard(tostring(game.PlaceId))
+        Notify("ID copiado: " .. game.PlaceId)
+    end
+end)
+CreateButton(MiscTab, "🔗 Copiar Job ID", function()
+    if setclipboard then setclipboard(game.JobId) Notify("Job ID copiado") end
+end)
+CreateButton(MiscTab, "👥 Contar Jogadores", function()
+    Notify("Online: " .. #Players:GetPlayers() .. " jogadores")
+end)
+
+CreateSection(MiscTab, "Servidor")
+CreateButton(MiscTab, "🚀 Rejoin Rápido", function()
+    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+end)
+
+-- CONFIG
+CreateSection(SettingsTab, "Interface")
+CreateButton(SettingsTab, "💚 Tema Verde (Padrão)", function()
+    CONFIG.Green = Color3.fromRGB(0, 255, 127)
+    CONFIG.GreenDark = Color3.fromRGB(0, 200, 90)
+    TitleLbl.TextColor3 = CONFIG.Green
+    Notify("Tema verde aplicado")
+end)
+CreateButton(SettingsTab, "🌿 Tema Verde Neon", function()
+    CONFIG.Green = Color3.fromRGB(57, 255, 20)
+    CONFIG.GreenDark = Color3.fromRGB(0, 220, 0)
+    TitleLbl.TextColor3 = CONFIG.Green
+    Notify("Tema neon aplicado")
+end)
+
+CreateSection(SettingsTab, "Sobre")
+CreateLabel(SettingsTab, "✦ MX Hub " .. CONFIG.Version)
+CreateLabel(SettingsTab, "✦ Green Edition")
+CreateLabel(SettingsTab, "✦ Brookhaven RP Support")
+
+CreateSection(SettingsTab, "Ações")
+CreateButton(SettingsTab, "❌ Fechar Hub", function() ScreenGui:Destroy() end)
+
+task.wait(0.7)
+Notify("Bem-vindo ao ¶ MX HUB ¶ Verde", 4)
+
+print("======================================")
+print("     ¶ MX HUB ¶ GREEN EDITION         ")
+print("     Versão: " .. CONFIG.Version)
+print("     Brookhaven RP Compatible         ")
+print("======================================")
